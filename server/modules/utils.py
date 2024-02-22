@@ -10,9 +10,35 @@ from torch import Tensor
 from typing import Tuple
 from torchvision.ops import nms
 
+import keras_ocr
+
+# keras-ocr will automatically download pretrained
+# weights for the detector and recognizer.
+pipeline = keras_ocr.pipeline.Pipeline()
+recognize = pipeline.recognize
+
 # image suffixes
 SUFFIXES = ('.bmp', '.dng', '.jpeg', '.jpg', '.mpo', '.png', '.tif', '.tiff',
             '.webp', '.pfm')
+
+
+
+# Mapping dictionaries for character conversion
+dict_char_to_int = {'O': '0',
+                    'I': '1',
+                    'J': '3',
+                    'A': '4',
+                    'G': '6',
+                    'S': '5',
+                    'T': '1'}
+
+dict_int_to_char = {'0': 'O',
+                    '1': 'I',
+                    '2': 'Z',
+                    '3': 'J',
+                    '4': 'A',
+                    '5': 'S',
+                    '6': 'G'}
 
 
 def letterbox(im: ndarray,
@@ -91,9 +117,73 @@ def det_postprocess(data: Tuple[Tensor, Tensor, Tensor, Tensor]):
     bboxes_n = bboxes.to('cpu').numpy()
     scores_n = scores.to('cpu').numpy()
     idx = nms(bboxes, scores, iou_thres)
-    # print(idx)
     bboxes, scores, labels = bboxes[idx], scores[idx], labels[idx]
     bboxes = bboxes[:nums]
     scores = scores[:nums]
     labels = labels[:nums]
     return bboxes, scores, labels
+
+
+def license_complies_format(text):
+    """
+    Check if the license plate text complies with the required format.
+
+    Args:
+        text (str): License plate text.
+
+    Returns:
+        bool: True if the license plate complies with the format, False otherwise.
+    """
+    if len(text) != 10:
+        return False
+
+    if (text[0] in string.ascii_uppercase or text[0] in dict_int_to_char.keys()) and \
+            (text[1] in string.ascii_uppercase or text[1] in dict_int_to_char.keys()) and \
+            (text[2] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[2] in dict_char_to_int.keys()) and \
+            (text[3] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[3] in dict_char_to_int.keys()) and \
+            (text[4] in string.ascii_uppercase or text[4] in dict_int_to_char.keys()) and \
+            (text[5] in string.ascii_uppercase or text[5] in dict_int_to_char.keys()) and \
+            (text[6] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[6] in dict_char_to_int.keys()) and \
+            (text[7] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[7] in dict_char_to_int.keys()) and \
+            (text[8] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[8] in dict_char_to_int.keys()) and \
+            (text[9] in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] or text[9] in dict_char_to_int.keys()):
+        return True
+    else:
+        return False
+
+
+def format_license(text):
+    """
+    Format the license plate text by converting characters using the mapping dictionaries.
+
+    Args:
+        text (str): License plate text.
+
+    Returns:
+        str: Formatted license plate text.
+    """
+    license_plate = ''
+    mapping = {0: dict_int_to_char, 1: dict_int_to_char, 
+               2: dict_char_to_int, 3: dict_char_to_int, 
+               4: dict_int_to_char, 5: dict_int_to_char,
+               6: dict_char_to_int, 7: dict_char_to_int, 8: dict_char_to_int, 9: dict_char_to_int}
+    for j in range(10):
+        if text[j] in mapping[j].keys():
+            license_plate += mapping[j][text[j]]
+        else:
+            license_plate += text[j]
+
+    return license_plate
+
+
+def keras_detector(blob):
+    outputs = recognize([blob])
+    ou = []
+    for out in outputs[0]:
+        # print(out[0])
+        ou.append(out[0].upper())
+    number = ''.join(ou)
+    number = format_license(number) if license_complies_format(number) else ""
+    return number
+
+
