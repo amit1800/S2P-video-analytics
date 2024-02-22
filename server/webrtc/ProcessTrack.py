@@ -12,6 +12,8 @@ import torch
 
 random.seed(0)
 
+AWS_FLAG = False
+
 # # detection model classes
 # CLASSES = ('human', 'smoke', 'fire', 'numbers' ,'knife','pistol')
 # # colors for per classes
@@ -89,10 +91,18 @@ face_cascade = cv2.CascadeClassifier(
 )
 
 
+# def dummy_model(input_frame: ndarray, call_from: str, callback) -> ndarray:
+#     draw = input_frame.copy()
+#     if call_from == 'human':
+#         cv2.circle(draw, (100, 100), 20, COLORS1['human'], -1)
+
 
 def HumanModel(input_frame:ndarray, callback) -> ndarray:
     draw = input_frame.copy()
     cv2.circle(draw, (100, 100), 20, COLORS1['human'], -1)
+    if !AWS_FLAG:
+        callback("human", "Human Detected")
+        return draw
     bgr, ratio, dwdh = letterbox(input_frame, (W, H))
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     tensor = blob(rgb, return_seg=False)
@@ -127,6 +137,9 @@ def HumanModel(input_frame:ndarray, callback) -> ndarray:
 def NumberPlateModel(input_frame:ndarray, callback) -> ndarray:
     draw = input_frame.copy()
     cv2.circle(draw, (150, 100), 20, COLORS3['number-plate'], -1)
+    if !AWS_FLAG:
+        callback("numberplate", "Number Plate")
+        return draw
     bgr, ratio, dwdh = letterbox(input_frame, (W, H))
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     tensor = blob(rgb, return_seg=False)
@@ -139,7 +152,7 @@ def NumberPlateModel(input_frame:ndarray, callback) -> ndarray:
         # if no bounding box
         print('No object!')
     
-        return input_frame
+        return draw
     bboxes -= dwdh
     bboxes /= ratio
 
@@ -164,6 +177,9 @@ def NumberPlateModel(input_frame:ndarray, callback) -> ndarray:
 def FireModel(input_frame:ndarray, callback) -> ndarray:
     draw = input_frame.copy()
     cv2.circle(draw, (200, 100), 20, COLORS2['fire'], -1)
+    if !AWS_FLAG:
+        callback("fire", "Fire Detected")
+        return draw
     bgr, ratio, dwdh = letterbox(input_frame, (W, H))
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     tensor = blob(rgb, return_seg=False)
@@ -175,7 +191,6 @@ def FireModel(input_frame:ndarray, callback) -> ndarray:
     if bboxes.numel() == 0:
         # if no bounding box
         print('No object!')
-    
         return draw
     bboxes -= dwdh
     bboxes /= ratio
@@ -199,6 +214,9 @@ def FireModel(input_frame:ndarray, callback) -> ndarray:
 def WeaponModel(input_frame:ndarray, callback) -> ndarray:
     draw = input_frame.copy()
     cv2.circle(draw, (250, 100), 20, COLORS4['knife'], -1)
+    if !AWS_FLAG:
+        callback("weapon", "Weapon Detected")
+        return draw
     bgr, ratio, dwdh = letterbox(input_frame, (W, H))
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     tensor = blob(rgb, return_seg=False)
@@ -211,13 +229,12 @@ def WeaponModel(input_frame:ndarray, callback) -> ndarray:
         # if no bounding box
         print('No object!')
     
-        return input_frame
+        return draw
     bboxes -= dwdh
     bboxes /= ratio
 
     for (bbox, score, label) in zip(bboxes, scores, labels):
         bbox = bbox.round().int().tolist()
-        blob_1 = draw[bbox[0]:bbox[2], bbox[1]: bbox[3], :]
         cls_id = int(label)
         cls = CLASSES4[cls_id]
         color = COLORS4[cls]
