@@ -5,14 +5,16 @@ import asyncio
 import random
 from numpy import ndarray
 
+AWS_FLAG = False
 
-from modules import TRTModule
-from modules.utils import blob, letterbox, det_postprocess, keras_detector
-import torch
+if AWS_FLAG:
+    from modules import TRTModule
+    from modules.utils import blob, letterbox, det_postprocess, keras_detector
+    import torch
 
 random.seed(0)
 
-AWS_FLAG = False
+
 
 # # detection model classes
 # CLASSES = ('human', 'smoke', 'fire', 'numbers' ,'knife','pistol')
@@ -57,44 +59,40 @@ COLORS4 = {
 # engine.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
 
 # Load Engine file 1
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+if AWS_FLAG:
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-engine_file1 = '/home/ubuntu/S2PS/weights/best-human.engine'
-engine1 = TRTModule(engine_file1, device)
-H, W = engine1.inp_info[0].shape[-2:]
-# set desired output names order
-engine1.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
+    engine_file1 = '/home/ubuntu/S2PS/weights/best-human.engine'
+    engine1 = TRTModule(engine_file1, device)
+    H, W = engine1.inp_info[0].shape[-2:]
+    # set desired output names order
+    engine1.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
 
-# Load Engine file 2 
-engine_file2 = '/home/ubuntu/S2PS/weights/best-fire.engine'
-engine2 = TRTModule(engine_file2, device)
-H, W = engine2.inp_info[0].shape[-2:]
-# set desired output names order
-engine2.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
+    # Load Engine file 2 
+    engine_file2 = '/home/ubuntu/S2PS/weights/best-fire.engine'
+    engine2 = TRTModule(engine_file2, device)
+    H, W = engine2.inp_info[0].shape[-2:]
+    # set desired output names order
+    engine2.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
 
-# Load Engine file 3
-engine_file3 = '/home/ubuntu/S2PS/weights/best-numplate.engine'
-engine3 = TRTModule(engine_file3, device)
-H, W = engine3.inp_info[0].shape[-2:]
-# set desired output names order
-engine3.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
+    # Load Engine file 3
+    engine_file3 = '/home/ubuntu/S2PS/weights/best-numplate.engine'
+    engine3 = TRTModule(engine_file3, device)
+    H, W = engine3.inp_info[0].shape[-2:]
+    # set desired output names order
+    engine3.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
 
-# Load Engine file 4
-engine_file4 = '/home/ubuntu/S2PS/weights/best-weapon.engine'
-engine4 = TRTModule(engine_file4, device)
-H, W = engine4.inp_info[0].shape[-2:]
-# set desired output names order
-engine4.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
+    # Load Engine file 4
+    engine_file4 = '/home/ubuntu/S2PS/weights/best-weapon.engine'
+    engine4 = TRTModule(engine_file4, device)
+    H, W = engine4.inp_info[0].shape[-2:]
+    # set desired output names order
+    engine4.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
 
 face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 )
 
-
-# def dummy_model(input_frame: ndarray, call_from: str, callback) -> ndarray:
-#     draw = input_frame.copy()
-#     if call_from == 'human':
-#         cv2.circle(draw, (100, 100), 20, COLORS1['human'], -1)
 
 
 def HumanModel(input_frame:ndarray, callback) -> ndarray:
@@ -120,7 +118,6 @@ def HumanModel(input_frame:ndarray, callback) -> ndarray:
 
     for (bbox, score, label) in zip(bboxes, scores, labels):
         bbox = bbox.round().int().tolist()
-        blob_1 = draw[bbox[0]:bbox[2], bbox[1]: bbox[3], :]
         cls_id = int(label)
         if cls_id == 0:
             cls = CLASSES1[cls_id]
@@ -197,7 +194,6 @@ def FireModel(input_frame:ndarray, callback) -> ndarray:
 
     for (bbox, score, label) in zip(bboxes, scores, labels):
         bbox = bbox.round().int().tolist()
-        blob_1 = draw[bbox[0]:bbox[2], bbox[1]: bbox[3], :]
         cls_id = int(label)
         cls = CLASSES3[cls_id]
         color = COLORS3[cls]
