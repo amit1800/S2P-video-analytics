@@ -326,28 +326,28 @@ class ProcessTrack(VideoStreamTrack):
         
         
     async def recv(self):
-        def detect_faces(img):
-            # Convert the image to grayscale
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            # return gray
-            # Detect faces in the image
-            faces = face_cascade.detectMultiScale(
-                gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
-            )
+        # def detect_faces(img):
+        #     # Convert the image to grayscale
+        #     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        #     # return gray
+        #     # Detect faces in the image
+        #     faces = face_cascade.detectMultiScale(
+        #         gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
+        #     )
             
-            if len(faces) == 0:
-                return img
-            # Draw rectangles around the faces
-            for x, y, w, h in faces:
-                img2 = cv2.rectangle(
-                    img,
-                    (x, y),
-                    (x + w, y + h),
-                    (255, 0, 0),
-                    2,
-                )
-                # return img2
-            return img2
+        #     if len(faces) == 0:
+        #         return img
+        #     # Draw rectangles around the faces
+        #     for x, y, w, h in faces:
+        #         img2 = cv2.rectangle(
+        #             img,
+        #             (x, y),
+        #             (x + w, y + h),
+        #             (255, 0, 0),
+        #             2,
+        #         )
+        #         # return img2
+        #     return img2
         frame = await self.track.recv()
         img = frame.to_ndarray(format="bgr24")
         new_frame = VideoFrame.from_ndarray((self.model(img)), format="bgr24")
