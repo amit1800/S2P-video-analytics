@@ -1,66 +1,54 @@
 from django.http import HttpResponse
 from webrtc.P2SRTCPeer import P2SRTCPeer
 from webrtc.S2SRTCPeer import S2SRTCPeer
-from aiortc.contrib.media import MediaRelay, MediaBlackhole
-from webrtc.ProcessTrack import ProcessTrack
+from aiortc.contrib.media import MediaBlackhole
 import uuid
-from asgiref.sync import async_to_sync
-import asyncio
-
+from base import views as base_views
+from asgiref.sync import sync_to_async
+from base.models import CUser
 class Pairing:
-    id = 0
-    free = True
     p2sTrack = 0
-    # relay = MediaRelay()
-    def __init__(self, s2sOffer, id=id, nTracks=1) -> None:
+    def __init__(self, s2sOffer, username, nTracks=1) -> None:
         self.s2sOffer = s2sOffer
         self.pcon = P2SRTCPeer()
         self.scon = S2SRTCPeer()
-        self.id = id
         self.uuid = uuid.uuid4()
         self.nTracks = nTracks
-
+        self.username = username
         self.blackhole = MediaBlackhole()
 
     async def eatMedia(self):
-        print("BLACK HOLE ACTIVATED")
-        for v in self.video:
+        for v in self.tracks:
             self.blackhole.addTrack(v)
         await self.blackhole.start()
+
     async def closeEvent(self):
-        self.free = True
         del self.pcon
         self.pcon = P2SRTCPeer()
-        print("peer closed, so pairing is open. free:", self.free)
         await self.eatMedia()
-        # del self.pcon
-        # self.pcon = P2SRTCPeer()
 
     async def connectP2S(self, P2Srequest):
         del self.pcon
         self.pcon = P2SRTCPeer()
-        self.p2sTrack = P2Srequest["framerate"]
-        print("Peer requested for this track: ", self.p2sTrack)
-        video = self.video[self.p2sTrack]
+        self.p2sTrack = P2Srequest["track"]
+        video = self.tracks[self.p2sTrack]
         self.res = await self.pcon.handle(
             request=P2Srequest,
-            # video=self.relay.subscribe(track=self.video[1]),
             video = (video),
             closeEvent=self.closeEvent,
         )
-        # self.pcon.changeP2SModel()
         self.free = False
         return self.res
-        if self.free:
-            pass
-        else:
-            return HttpResponse("not available")
     def changeP2SModels(self, models):
         self.pcon.changeP2SModels(models)
+
+    async def closeS2S(self, username):
+        await base_views.deactivateTracksForUser(username=username)
     async def connectS2S(self):
         del self.scon
         self.scon = S2SRTCPeer()
-        res = await self.scon.handle(offer=self.s2sOffer, nTracks= self.nTracks, uuid=self.uuid,)
-        self.video = self.scon.getS()
+        # await base_views.deactivateTracksForUser(username=self.username)
+        res = await self.scon.handle(offer=self.s2sOffer, nTracks= self.nTracks, uuid=self.uuid, closeCallback=self.closeS2S, username=self.username)
+        self.tracks = self.scon.getS()
         await self.eatMedia()
         return res

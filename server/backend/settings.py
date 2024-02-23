@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "base",
     "corsheaders",
     "rest_framework",
+     'multiselectfield',
 ]
 ASGI_APPLICATION = "backend.asgi.application"
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

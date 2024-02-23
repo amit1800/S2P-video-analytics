@@ -20,21 +20,18 @@ from aiortc.contrib.media import MediaRelay
 from webrtc.P2SRTCPeer import P2SRTCPeer
 from webrtc.S2SRTCPeer import S2SRTCPeer
 from django.views.decorators.csrf import csrf_exempt
-from webrtc.ProcessTrack import ProcessTrack
 from webrtc.Pairing import Pairing
 from asgiref.sync import sync_to_async
 
 from django.contrib.auth.hashers import make_password, check_password
 from base.models import CUser
-from base.views import isAuthenticated, setStreamNamesToModel
+from base.views import isAuthenticated, setTracksForUser
 
 ROOT = os.path.dirname(__file__)
 logger = logging.getLogger("pc")
 pc = RTCPeerConnection()
 
 con = []
-top = 0
-
 
 async def p2sHttpIndex(request):
     return render(request, "./p2sHttp.html")
@@ -52,14 +49,8 @@ async def p2sOffer(request):
         if len(con) != 0:
             for pairing in con:
                 user = await sync_to_async(CUser.objects.get)(username=username)
-                print("user streamid", user.streamID)
-                print("con list streamid", pairing["pairing"].uuid)
                 if str(user.streamID) == str(pairing["pairing"].uuid):
-                    print("pairing found for amit")
                     res = await pairing["pairing"].connectP2S(P2Srequest=offer)
-
-                    # await asyncio.sleep()
-                    printOut(pairing)
                     return HttpResponse(res)
             else:
                 return HttpResponse("no stream for this user")
@@ -69,16 +60,13 @@ async def p2sOffer(request):
 @csrf_exempt
 async def changeP2SModel(request):
     body = request.body
-    print("sdfalhadsfkj")
     parsedReq = json.loads(body)
     username = parsedReq["username"]
     models = parsedReq["model"]
-    # cond = await sync_to_async(isAuthenticated)(username, password)
     if len(con) != 0:
         for pairing in con:
             user = await sync_to_async(CUser.objects.get)(username=username)
             if str(user.streamID) == str(pairing["pairing"].uuid):
-                print("pairing found for amit")
                 pairing["pairing"].changeP2SModels(models)
                 return HttpResponse("model changed to", models)
         else:
@@ -96,31 +84,15 @@ async def s2sOffer(request):
     if cond:
         offerJson = json.loads(parsedReq["offer"])
         streamNames = parsedReq["streamNames"]
-        await sync_to_async(setStreamNamesToModel)(username, streamNames)
-        print("stream names:", streamNames )
+        trackNames = streamNames
+        await sync_to_async(setTracksForUser)(trackNames, username)
         offer = RTCSessionDescription(**offerJson)
-        global top
-        top = top + 1
-        i = Pairing(s2sOffer=offer, id=top, nTracks = nTracks)
+        i = Pairing(s2sOffer=offer,username=username, nTracks = nTracks)
         await sync_to_async(CUser.objects.filter(username=username).update)(
             streamID=i.uuid
         )
-        u2 = await CUser.objects.aget(username=username)
-        print("user stream id", u2.streamID, u2.username)
-
-        con.append({"id": i.id, "pairing": i})
-        # res = asyncio.run(asyncS2S(con))
+        con.append({"id": i.uuid, "pairing": i})
         res = await con[-1]["pairing"].connectS2S()
-        printCon()
         return res
     else:
         return HttpResponse("authentication failed")
-
-
-def printCon():
-    for i in con:
-        print("id:", i["id"], "value:", i["pairing"])
-
-
-def printOut(i):
-    print("out>> id:", i["id"], "value:", i["pairing"])

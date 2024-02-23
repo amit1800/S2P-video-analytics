@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.contrib.auth.hashers import make_password, check_password
 from base.models import CUser
-from base.views import isAuthenticated, getStreams, createNewUser, getStreamNamesFromModel
+from base import views as base_view
 from asgiref.sync import sync_to_async
 # Create your views here.
 
@@ -13,7 +13,7 @@ def authenticate(request):
     us = request.data["username"]
     pw = request.data["password"]
     # print(us, make_password(pw))
-    if isAuthenticated(us, pw): 
+    if base_view.isAuthenticated(us, pw): 
         return Response({"auth": True})
     else:
         return Response({"auth": False})
@@ -25,7 +25,7 @@ def adduser(request):
         password = request.data["password"]
         firstname = request.data["firstname"]
         lastname = request.data["lastname"]
-        res = createNewUser(firstname, lastname,username, password)
+        res = base_view.createNewUser(firstname, lastname,username, password)
         #perform user creation query
         return res
     except:
@@ -33,7 +33,6 @@ def adduser(request):
 
 @api_view(["POST"])
 def getStreamNames(request):
-
     username = request.data["username"]
-    res = getStreamNamesFromModel(username)
+    res = base_view.getAcitveTracksForUser(username)
     return res
